@@ -1,13 +1,15 @@
 import rospy
 import math
 from geometry_msgs.msg import Twist
+from nav_msgs.msg import OccupancyGrid
 
 
 class platypous_controller:
     def __init__(self):
         rospy.init_node('platypous_controller', anonymous=True)
         self.twist_pub = rospy.Publisher(
-            '/driver/cmd_vel', Twist, queue_size=10)
+            '/cmd_vel/nav', Twist, queue_size=10)
+        self.slam_listener = rospy.Subscriber(name, OccupancyGrid)
 
     def test(self, forward):
         vel_msg = Twist()
