@@ -41,7 +41,6 @@ class platypous_controller:
         self.twist_pub.publish(vel_msg)
 
 
-
 if __name__ == '__main__':
     # Init
     pc = platypous_controller()
