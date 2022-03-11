@@ -2,7 +2,6 @@ import rospy
 import math
 from geometry_msgs.msg import Twist
 
-
 class platypous_controller:
     def __init__(self):
         rospy.init_node('platypous_controller', anonymous=True)
@@ -25,8 +24,25 @@ class platypous_controller:
         vel_msg.linear.x = 0
         self.twist_pub.publish(vel_msg)
 
+    def rotate(self, degrees_per_sec, time_sec, forward=True):
+        vel_msg = Twist()
+        if forward:
+            vel_msg.angular.y = degrees_per_sec
+        else:
+            vel_msg.angular.y = -degrees_per_sec
+        self.twist_pub.publish(vel_msg)
+
+        rate = rospy.Rate(100)
+        t0 = rospy.Time().now().to_sec()
+        while (rospy.Time().now().to_sec() - t0 <= time_sec) and not (rospy.is_shutdown()):
+            self.twist_pub.publish(vel_msg)
+            rate.sleep()
+        vel_msg.linear.x = 0
+        self.twist_pub.publish(vel_msg)
+
+
 
 if __name__ == '__main__':
     # Init
     pc = platypous_controller()
-    pc.move_straight(speed_m_per_s=1, time_sec=1, forward=True)
+    pc.rotate(1, 10)
