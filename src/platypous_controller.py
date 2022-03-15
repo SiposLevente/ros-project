@@ -1,12 +1,36 @@
 import rospy
 import math
 from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
+from sensor_msgs.msg import LaserScan
+from nav_msgs.msg import OccupancyGrid
 
 class platypous_controller:
+
     def __init__(self):
-        rospy.init_node('platypous_controller', anonymous=True)
+        self.listener()
+        rospy.sleep(1)
+        self.publisher()
+    
+
+    def wheelTwistOdometry(self, msg):
+        self.wheelTwistOdometry = msg
+
+    def laserScan(self, msg):
+        self.laserScan = msg
+
+    def slam(self, msg):
+        self.slam = msg
+
+    def publisher(self):
         self.twist_pub = rospy.Publisher(
             '/cmd_vel/nav', Twist, queue_size=10)
+
+    def listener(self):
+        rospy.init_node('platypous_controller', anonymous=True)
+        self.subscribe_odometry = rospy.Subscriber("/driver/wheel_odometry", Odometry, self.wheelTwistOdometry)
+        self.subscribe_laser = rospy.Subscriber("/scan", LaserScan, self.laserScan)
+        self.subscribe_slam = rospy.Subscriber("/map", OccupancyGrid, self.slam)
 
     def move_straight(self, speed_m_per_s, time_sec, forward=True):
         vel_msg = Twist()
@@ -27,9 +51,11 @@ class platypous_controller:
     def rotate(self, degrees_per_sec, time_sec, forward=True):
         vel_msg = Twist()
         if forward:
-            vel_msg.angular.y = degrees_per_sec
+            vel_msg.angular.z = degrees_per_sec
+
         else:
-            vel_msg.angular.y = -degrees_per_sec
+            vel_msg.angular.z = -degrees_per_sec
+
         self.twist_pub.publish(vel_msg)
 
         rate = rospy.Rate(100)
@@ -37,11 +63,11 @@ class platypous_controller:
         while (rospy.Time().now().to_sec() - t0 <= time_sec) and not (rospy.is_shutdown()):
             self.twist_pub.publish(vel_msg)
             rate.sleep()
-        vel_msg.linear.x = 0
+        vel_msg.angular.z = 0
         self.twist_pub.publish(vel_msg)
 
 
 if __name__ == '__main__':
     # Init
     pc = platypous_controller()
-    pc.rotate(1, 10)
+    print(pc.slam)
