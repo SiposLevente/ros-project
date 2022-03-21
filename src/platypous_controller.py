@@ -4,8 +4,19 @@ from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import OccupancyGrid
+from enum import Enum
 
-from os import system
+scan_range = 35
+real_scan_range = scan_range*2
+distance_to_keep = 1
+
+
+class Direction(Enum):
+    Left = 180,
+    ForwardLeft = 90,
+    Forward = 0,
+    ForwardRight = -90,
+    Right = 180,
 
 
 class platypous_controller:
@@ -36,9 +47,8 @@ class platypous_controller:
 
     def slam(self, msg):
         self.slam_data = msg
-        print(msg)
 
-    def move_straight(self, speed_m_per_s, time_sec, forward=True):
+    def move_straight(self, speed_m_per_s, forward=True):
         vel_msg = Twist()
         if forward:
             vel_msg.linear.x = speed_m_per_s
@@ -47,45 +57,49 @@ class platypous_controller:
         self.twist_pub.publish(vel_msg)
 
         rate = rospy.Rate(100)
-        t0 = rospy.Time().now().to_sec()
-        while (rospy.Time().now().to_sec() - t0 <= time_sec) and not (rospy.is_shutdown()):
+        while not (rospy.is_shutdown()) and not self.detect_collision(Direction.Forward):
             self.twist_pub.publish(vel_msg)
             rate.sleep()
         vel_msg.linear.x = 0
         self.twist_pub.publish(vel_msg)
 
-    def rotate(self, degrees_per_sec, time_sec, forward=True):
+    def rotate(self, degrees_per_sec, forward=True):
         vel_msg = Twist()
         if forward:
-            vel_msg.angular.z = degrees_per_sec
+            vel_msg.angular.z = math.radians(degrees_per_sec)
 
         else:
-            vel_msg.angular.z = -degrees_per_sec
+            vel_msg.angular.z = math.radians(-degrees_per_sec)
 
         self.twist_pub.publish(vel_msg)
 
         rate = rospy.Rate(100)
-        t0 = rospy.Time().now().to_sec()
-        while (rospy.Time().now().to_sec() - t0 <= time_sec) and not (rospy.is_shutdown()):
+        while not (rospy.is_shutdown()) and self.detect_collision(Direction.Forward):
             self.twist_pub.publish(vel_msg)
             rate.sleep()
         vel_msg.angular.z = 0
         self.twist_pub.publish(vel_msg)
 
+    def detect_collision(self, Direction):
+        for i in range(real_scan_range):
+            if self.laserScan_data.ranges[Direction.value[0] - scan_range + i] <= distance_to_keep:
+                return True
+        return False
+
 
 if __name__ == '__main__':
     # Init
     pc = platypous_controller()
-    # print(pc.wheelTwistOdometry_data)
-    toggler = False
-    direction = 360
-    while not rospy.is_shutdown():
-        if(pc.laserScan_data.ranges[direction] >= 2.0):
-            pc.move_straight(1, 1, toggler)
+    while True:
+        if not pc.detect_collision(Direction.Forward):
+            print("moving forward")
+            pc.move_straight(1)
+        elif pc.detect_collision(Direction.ForwardRight):
+            print("moving left")
+            pc.rotate(30)
+        elif pc.detect_collision(Direction.ForwardLeft):
+            print("moving right")
+            pc.rotate(30,  False)
         else:
-            if toggler:
-                direction = 360
-            else:
-                direction = 0
-            toggler = not toggler
-    # print(pc.slam_data)
+            print("doing nothing, so moving right")
+            pc.rotate(30, False)
