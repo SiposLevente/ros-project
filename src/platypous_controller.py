@@ -18,6 +18,10 @@ class Direction(Enum):
     ForwardRight = -90,
     Right = 180,
 
+class Wall_Detected(Enum):
+    Left = 0,
+    Right = 1,
+    Not_detected = 2,
 
 class platypous_controller:
 
@@ -48,37 +52,31 @@ class platypous_controller:
     def slam(self, msg):
         self.slam_data = msg
 
-    def move_straight(self, speed_m_per_s, forward=True):
-        vel_msg = Twist()
-        if forward:
-            vel_msg.linear.x = speed_m_per_s
-        else:
-            vel_msg.linear.x = -speed_m_per_s
-        self.twist_pub.publish(vel_msg)
-
+    def move(self, speed_m_per_s):
         rate = rospy.Rate(100)
-        while not (rospy.is_shutdown()) and not self.detect_collision(Direction.Forward):
-            self.twist_pub.publish(vel_msg)
+        while not rospy.is_shutdown():
+            wall_detection = Wall_Detected.Not_detected
+            if self.detect_collision(Direction.Left):
+                wall_detection = Wall_Detected.Left
+            if self.detect_collision(Direction.Right):
+                wall_detection = Wall_Detected.Right
+
+
+            vel_msg = Twist()
+            if not self.detect_collision(Direction.Forward):
+                vel_msg.linear.x += speed_m_per_s
+                print("moving forward")
+
+            if self.detect_collision(Direction.ForwardLeft):
+                vel_msg.angular.z += math.radians(-15)
+                print("turning right")
+            elif self.detect_collision(Direction.ForwardRight):
+                vel_msg.angular.z += math.radians(15)
+                print("turning left")
             rate.sleep()
-        vel_msg.linear.x = 0
-        self.twist_pub.publish(vel_msg)
-
-    def rotate(self, degrees_per_sec, forward=True):
-        vel_msg = Twist()
-        if forward:
-            vel_msg.angular.z = math.radians(degrees_per_sec)
-
-        else:
-            vel_msg.angular.z = math.radians(-degrees_per_sec)
-
-        self.twist_pub.publish(vel_msg)
-
-        rate = rospy.Rate(100)
-        while not (rospy.is_shutdown()) and self.detect_collision(Direction.Forward):
             self.twist_pub.publish(vel_msg)
-            rate.sleep()
-        vel_msg.angular.z = 0
-        self.twist_pub.publish(vel_msg)
+
+       
 
     def detect_collision(self, Direction):
         for i in range(real_scan_range):
@@ -90,16 +88,4 @@ class platypous_controller:
 if __name__ == '__main__':
     # Init
     pc = platypous_controller()
-    while True:
-        if not pc.detect_collision(Direction.Forward):
-            print("moving forward")
-            pc.move_straight(1)
-        elif pc.detect_collision(Direction.ForwardRight):
-            print("moving left")
-            pc.rotate(30)
-        elif pc.detect_collision(Direction.ForwardLeft):
-            print("moving right")
-            pc.rotate(30,  False)
-        else:
-            print("doing nothing, so moving right")
-            pc.rotate(30, False)
+    pc.move(1)
