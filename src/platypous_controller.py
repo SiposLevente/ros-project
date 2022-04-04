@@ -9,7 +9,7 @@ from enum import Enum
 scan_range = 35
 real_scan_range = scan_range*2
 distance_to_keep = 1
-
+turn_angle = 15
 
 class Direction(Enum):
     Left = 180,
@@ -56,31 +56,39 @@ class platypous_controller:
                 vel_msg.linear.x += speed_m_per_s
                 print("moving forward")
                 if self.detect_collision(Direction.ForwardLeft):
-                    vel_msg.angular.z += math.radians(-15)
+                    vel_msg.angular.z += math.radians(-turn_angle)
                     print("turning right")
                 elif self.detect_collision(Direction.ForwardRight):
-                    vel_msg.angular.z += math.radians(15)
+                    vel_msg.angular.z += math.radians(turn_angle)
                     print("turning left")
+
+                if self.detect_collision(Direction.Left):
+                    vel_msg.angular.z += math.radians(-turn_angle)
+                    print("turning left")
+                else:
+                    vel_msg.angular.z += math.radians(turn_angle)
+                    print("turning right")
+
             else:
                 print("detected wall")
                 if self.detect_collision(Direction.ForwardLeft) or self.detect_collision(Direction.ForwardRight):
                     if self.detect_collision(Direction.ForwardLeft):
-                        vel_msg.angular.z += math.radians(-15)
+                        vel_msg.angular.z += math.radians(-turn_angle)
                         print("turning right")
                     elif self.detect_collision(Direction.ForwardRight):
-                        vel_msg.angular.z += math.radians(15)
+                        vel_msg.angular.z += math.radians(turn_angle)
                         print("turning left")
                     elif self.get_closeset(Direction.ForwardLeft) < self.get_closeset(Direction.ForwardRight):
-                        vel_msg.angular.z += math.radians(-15)
+                        vel_msg.angular.z += math.radians(-turn_angle)
                         print("turning right")
                     elif self.get_closeset(Direction.ForwardLeft) > self.get_closeset(Direction.ForwardRight):
-                        vel_msg.angular.z += math.radians(15)
+                        vel_msg.angular.z += math.radians(turn_angle)
                         print("turning left")
                     else:
-                        vel_msg.angular.z += math.radians(-15)
+                        vel_msg.angular.z += math.radians(-turn_angle)
                         print("turning right")
                 else:
-                    vel_msg.angular.z += math.radians(-15)
+                    vel_msg.angular.z += math.radians(-turn_angle)
                     print("turning right")
 
             rate.sleep()
