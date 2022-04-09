@@ -57,22 +57,24 @@ class platypous_controller:
 
     def getWalAngle(self, starting_angle):
         angle = 10
-        front_wall_dist = self.get_distance(starting_angle-int(angle/2),False)
-        center_wall_dist = self.get_distance(starting_angle,False)
-        back_wall_dist = self.get_distance(starting_angle+int(angle/2),False)
+        front_wall_dist = self.get_distance(starting_angle-int(angle/2), False)
+        center_wall_dist = self.get_distance(starting_angle, False)
+        back_wall_dist = self.get_distance(starting_angle+int(angle/2), False)
 
         third_wall_length_calc = (
             front_wall_dist**2)+(back_wall_dist**2)-(2*back_wall_dist*front_wall_dist)*math.cos(math.radians(angle))
         third_wall_length = math.sqrt(third_wall_length_calc)
 
-        third_wall_length_angle_calc = ((third_wall_length**2)+(back_wall_dist**2)-(front_wall_dist**2))/(2*third_wall_length*back_wall_dist)
-        front_wall_angle = math.degrees(math.acos(third_wall_length_angle_calc))
+        third_wall_length_angle_calc = ((third_wall_length**2)+(back_wall_dist**2)-(
+            front_wall_dist**2))/(2*third_wall_length*back_wall_dist)
+        front_wall_angle = math.degrees(
+            math.acos(third_wall_length_angle_calc))
 
         return -(90-int(angle/2)-front_wall_angle)
-        
+
     def test(self):
         rate = rospy.Rate(100)
-        
+
         while not rospy.is_shutdown():
             vel_msg = Twist()
             angle_to_turn = self.getWalAngle(Direction.Right.value[0])
@@ -89,11 +91,21 @@ class platypous_controller:
                 angle_to_turn = self.getWalAngle(Direction.Right.value[0])
                 print(angle_to_turn)
 
-                safe_angle = 1.5
-                if angle_to_turn <= safe_angle and angle_to_turn >= -safe_angle:
+                truning = False
+                if self.get_closeset(Direction.Right) < 1.5:
+                    vel_msg.angular.z += math.radians(2)
                     vel_msg.linear.x += speed_m_per_s
-                if angle_to_turn != math.nan and angle_to_turn < 40:
-                    vel_msg.angular.z = math.radians(angle_to_turn)
+                    truning = True
+                elif self.get_closeset(Direction.Right) > 3:
+                    vel_msg.angular.z += -math.radians(2)
+                    vel_msg.linear.x += speed_m_per_s
+                    truning = True
+
+                safe_angle = 1.5
+                if angle_to_turn <= safe_angle and angle_to_turn >= -safe_angle and not truning:
+                    vel_msg.linear.x += speed_m_per_s
+                if angle_to_turn != math.nan and angle_to_turn < 40 and not truning:
+                    vel_msg.angular.z += math.radians(angle_to_turn)
                 print("moving forward")
 
             else:
