@@ -23,17 +23,20 @@ class Direction(Enum):
     BackRight = -270,
     Back = 360,
 
+
 class Orientation:
-    def __init__(self,x,y,z):
+    def __init__(self, x, y, z):
         self.x = x
         self.y = y
         self.z = z
 
+
 class Position:
-    def __init__(self,x,y,z):
+    def __init__(self, x, y, z):
         self.x = x
         self.y = y
         self.z = z
+
 
 class platypous_controller:
 
@@ -80,10 +83,14 @@ class platypous_controller:
         rate = rospy.Rate(100)
         while not rospy.is_shutdown():
             vel_msg = Twist()
-            print(self.wheelTwistOdometry_data.pose.pose.position.x)
+            vel_msg.angular.z += math.radians(15)
+            print("---------")
+            print("Z: " + str(self.get_current_orientation().z))
+            print("X: " + str(self.get_current_orientation().x))
+            print("Y: " + str(self.get_current_orientation().y))
 
-            rate.sleep()
             self.twist_pub.publish(vel_msg)
+            rate.sleep()
 
     def get_closeset(self, Direction):
         minrange = 999
@@ -108,17 +115,18 @@ class platypous_controller:
         t0 = +2.0 * (w * x + y * z)
         t1 = +1.0 - 2.0 * (x * x + y * y)
         roll_x = math.atan2(t0, t1)
-     
+
         t2 = +2.0 * (w * y - z * x)
         t2 = +1.0 if t2 > +1.0 else t2
         t2 = -1.0 if t2 < -1.0 else t2
         pitch_y = math.asin(t2)
-     
+
         t3 = +2.0 * (w * z + x * y)
         t4 = +1.0 - 2.0 * (y * y + z * z)
         yaw_z = math.atan2(t3, t4)
-     
-        orientation = Orientation(math.degrees(roll_x), math.degrees(pitch_y), math.degrees(yaw_z))
+
+        orientation = Orientation(math.degrees(
+            roll_x), math.degrees(pitch_y), math.degrees(yaw_z))
 
         return orientation
 
@@ -132,6 +140,7 @@ class platypous_controller:
 
     def get_distance_between_positions(self, pos_base, pos_comp):
         return math.sqrt(math.pow((pos_comp.x-pos_base.x), 2)+math.pow((pos_comp.y-pos_base.y), 2)+math.pow((pos_comp.z-pos_base.z), 2))
+
 
 if __name__ == '__main__':
     pc = platypous_controller()
