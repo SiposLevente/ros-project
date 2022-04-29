@@ -79,15 +79,22 @@ class platypous_controller:
 
         return -(90-int(angle/2)-front_wall_angle)
 
-    def move(self, speed_m_per_s):
+    def move(self):
         rate = rospy.Rate(100)
+        angle_to_turn = 0
+        prev_angle = 0
         while not rospy.is_shutdown():
             vel_msg = Twist()
-            vel_msg.angular.z += math.radians(15)
-            print("---------")
-            print("Z: " + str(self.get_current_orientation().z))
-            print("X: " + str(self.get_current_orientation().x))
-            print("Y: " + str(self.get_current_orientation().y))
+            wall_angle = self.getWalAngle(Direction.Left.value[0])
+            if abs(wall_angle) > 15:
+                angle_to_turn = wall_angle
+                if abs(angle_to_turn) > 0:
+                    
+                    vel_msg.angular.z = math.radians(3*math.sqrt(abs(angle_to_turn)))
+
+                    if angle_to_turn < 0:
+                        vel_msg.angular.z *= -1
+                    
 
             self.twist_pub.publish(vel_msg)
             rate.sleep()
@@ -144,4 +151,4 @@ class platypous_controller:
 
 if __name__ == '__main__':
     pc = platypous_controller()
-    pc.move(1)
+    pc.move()
