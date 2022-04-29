@@ -17,14 +17,23 @@ class Direction(Enum):
     BackLeft = 270,
     Left = 180,
     ForwardLeft = 90,
-
     Forward = 0,
-
     ForwardRight = -90,
     Right = -180,
     BackRight = -270,
     Back = 360,
 
+class Orientation:
+    def __init__(self,x,y,z):
+        self.x = x
+        self.y = y
+        self.z = z
+
+class Position:
+    def __init__(self,x,y,z):
+        self.x = x
+        self.y = y
+        self.z = z
 
 class platypous_controller:
 
@@ -43,17 +52,12 @@ class platypous_controller:
             "/driver/wheel_odometry", Odometry, self.wheelTwistOdometry)
         self.subscribe_laser = rospy.Subscriber(
             "/scan", LaserScan, self.laserScan)
-        self.subscribe_slam = rospy.Subscriber(
-            "/map", OccupancyGrid, self.slam)
 
     def wheelTwistOdometry(self, msg):
         self.wheelTwistOdometry_data = msg
 
     def laserScan(self, msg):
         self.laserScan_data = msg
-
-    def slam(self, msg):
-        self.slam_data = msg
 
     def getWalAngle(self, starting_angle):
         angle = 10
@@ -72,44 +76,11 @@ class platypous_controller:
 
         return -(90-int(angle/2)-front_wall_angle)
 
-    def test(self):
-        rate = rospy.Rate(100)
-
-        while not rospy.is_shutdown():
-            vel_msg = Twist()
-            angle_to_turn = self.getWalAngle(Direction.Right.value[0])
-            vel_msg.angular.z = math.radians(angle_to_turn)
-            print(angle_to_turn)
-            self.twist_pub.publish(vel_msg)
-            rate.sleep()
-
     def move(self, speed_m_per_s):
         rate = rospy.Rate(100)
         while not rospy.is_shutdown():
             vel_msg = Twist()
-            if not self.detect_collision(Direction.Forward):
-                angle_to_turn = self.getWalAngle(Direction.Right.value[0])
-                print(angle_to_turn)
-
-                truning = False
-                if self.get_closeset(Direction.Right) < 1.5:
-                    vel_msg.angular.z += math.radians(2)
-                    vel_msg.linear.x += speed_m_per_s
-                    truning = True
-                elif self.get_closeset(Direction.Right) > 3:
-                    vel_msg.angular.z += -math.radians(2)
-                    vel_msg.linear.x += speed_m_per_s
-                    truning = True
-
-                safe_angle = 1.5
-                if angle_to_turn <= safe_angle and angle_to_turn >= -safe_angle and not truning:
-                    vel_msg.linear.x += speed_m_per_s
-                if angle_to_turn != math.nan and angle_to_turn < 40 and not truning:
-                    vel_msg.angular.z += math.radians(angle_to_turn)
-                print("moving forward")
-
-            else:
-                print("wall detected")
+            print(self.wheelTwistOdometry_data.pose.pose.position.x)
 
             rate.sleep()
             self.twist_pub.publish(vel_msg)
@@ -118,7 +89,7 @@ class platypous_controller:
         minrange = 999
         for i in range(real_scan_range):
             range_measured = self.laserScan_data.ranges[Direction.value[0] + i]
-            if range_measured < minrange:
+            if (range_measured < minrange) and range_measured != 0:
                 minrange = range_measured
         return minrange
 
@@ -133,8 +104,35 @@ class platypous_controller:
                 return True
         return False
 
+    def euler_from_quaternion(self, x, y, z, w):
+        t0 = +2.0 * (w * x + y * z)
+        t1 = +1.0 - 2.0 * (x * x + y * y)
+        roll_x = math.atan2(t0, t1)
+     
+        t2 = +2.0 * (w * y - z * x)
+        t2 = +1.0 if t2 > +1.0 else t2
+        t2 = -1.0 if t2 < -1.0 else t2
+        pitch_y = math.asin(t2)
+     
+        t3 = +2.0 * (w * z + x * y)
+        t4 = +1.0 - 2.0 * (y * y + z * z)
+        yaw_z = math.atan2(t3, t4)
+     
+        orientation = Orientation(math.degrees(roll_x), math.degrees(pitch_y), math.degrees(yaw_z))
+
+        return orientation
+
+    def get_current_orientation(self):
+        orientation = self.wheelTwistOdometry_data.pose.pose.orientation
+        return self.euler_from_quaternion(orientation.x, orientation.y, orientation.z, orientation.w)
+
+    def get_current_position(self):
+        position = self.wheelTwistOdometry_data.pose.pose.position
+        return Position(position.x, position.y, position.z)
+
+    def get_distance_between_positions(self, pos_base, pos_comp):
+        return math.sqrt(math.pow((pos_comp.x-pos_base.x), 2)+math.pow((pos_comp.y-pos_base.y), 2)+math.pow((pos_comp.z-pos_base.z), 2))
 
 if __name__ == '__main__':
-    # Init
     pc = platypous_controller()
     pc.move(1)
