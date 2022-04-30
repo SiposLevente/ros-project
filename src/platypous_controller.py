@@ -22,6 +22,7 @@ class Direction(Enum):
     Right = -180,
     BackRight = -270,
     Back = 360,
+    NotSet = -1,
 
 
 class Orientation:
@@ -85,16 +86,18 @@ class platypous_controller:
         prev_angle = 0
         while not rospy.is_shutdown():
             vel_msg = Twist()
-            wall_angle = self.getWalAngle(Direction.Left.value[0])
-            if abs(wall_angle) > 15:
-                angle_to_turn = wall_angle
-                if abs(angle_to_turn) > 0:
-                    
-                    vel_msg.angular.z = math.radians(3*math.sqrt(abs(angle_to_turn)))
+            wall_detected = Direction.NotSet
 
-                    if angle_to_turn < 0:
-                        vel_msg.angular.z *= -1
-                    
+            if not self.detect_collision(Direction.Forward):
+                vel_msg.linear.x += 1
+                
+                if self.detect_collision(Direction.Left) or self.detect_collision(Direction.Left) and self.detect_collision(Direction.Right):
+                    vel_msg.angular.z += math.radians(self.getWalAngle(Direction.Left.value[0]))
+                else:
+                    vel_msg.angular.z += math.radians(self.getWalAngle(Direction.Right.value[0]))
+
+            
+
 
             self.twist_pub.publish(vel_msg)
             rate.sleep()
@@ -147,6 +150,36 @@ class platypous_controller:
 
     def get_distance_between_positions(self, pos_base, pos_comp):
         return math.sqrt(math.pow((pos_comp.x-pos_base.x), 2)+math.pow((pos_comp.y-pos_base.y), 2)+math.pow((pos_comp.z-pos_base.z), 2))
+
+    def turn(self, angle):
+        curr_angle = round(-self.get_current_orientation().z)
+        goal_angle = self.add_to_angle(curr_angle, angle)
+        rate = rospy.Rate(100)
+        while not self.is_proximatly_equal(round(-self.get_current_orientation().z), goal_angle, 3) and not rospy.is_shutdown():
+            vel_msg = Twist()
+            if angle < 0:
+                vel_msg.angular.z = 1
+            else:
+                vel_msg.angular.z = -1
+
+            rate.sleep()
+            self.twist_pub.publish(vel_msg)
+
+            vel_msg.angular.z = 0
+            self.twist_pub.publish(vel_msg)
+
+    def add_to_angle(self, base_angle, increment):
+        base_angle += increment
+        if base_angle > 180:
+            base_angle = (-180 + base_angle)-180
+        if base_angle < -180:
+            base_angle = (base_angle)+180*2
+        return base_angle
+
+    def is_proximatly_equal(self, val_base, val_cmp, deviation):
+        if val_base >= val_cmp-deviation and val_base <= val_cmp+deviation:
+            return True
+        return False
 
 
 if __name__ == '__main__':
