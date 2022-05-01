@@ -63,7 +63,7 @@ class platypous_controller:
     def laserScan(self, msg):
         self.laserScan_data = msg
 
-    def getWalAngle(self, starting_angle):
+    def get_wall_angle(self, starting_angle):
         angle = 10
         front_wall_dist = self.get_distance(starting_angle-int(angle/2), False)
         center_wall_dist = self.get_distance(starting_angle, False)
@@ -80,27 +80,67 @@ class platypous_controller:
 
         return -(90-int(angle/2)-front_wall_angle)
 
-    def move(self):
+    def move(self, speed_m_per_s):
         rate = rospy.Rate(100)
-        angle_to_turn = 0
-        prev_angle = 0
         while not rospy.is_shutdown():
             vel_msg = Twist()
-            wall_detected = Direction.NotSet
-
             if not self.detect_collision(Direction.Forward):
-                vel_msg.linear.x += 1
-                
-                if self.detect_collision(Direction.Left) or self.detect_collision(Direction.Left) and self.detect_collision(Direction.Right):
-                    vel_msg.angular.z += math.radians(self.getWalAngle(Direction.Left.value[0]))
+                vel_msg.linear.x += speed_m_per_s
+
+                if self.detect_collision(Direction.ForwardLeft):
+                    vel_msg.angular.z += math.radians(-10)
+
+                elif self.detect_collision(Direction.ForwardRight):
+                    vel_msg.angular.z += math.radians(10)
+
+                stapilization_needed = False
+
+                if self.get_distance(Direction.Right.value[0], False) < self.get_distance(Direction.Left.value[0], False):
+                    if self.get_distance(Direction.Right.value[0], False) < distance_to_keep:
+                        vel_msg.angular.z += math.radians(5)
+                    elif self.get_distance(Direction.Right.value[0], False) > 3:
+                        vel_msg.angular.z += math.radians(-5)
+                    else:
+                        stapilization_needed = True
                 else:
-                    vel_msg.angular.z += math.radians(self.getWalAngle(Direction.Right.value[0]))
+                    if self.get_distance(Direction.Left.value[0], False) < distance_to_keep:
+                        vel_msg.angular.z += math.radians(-5)
+                    elif self.get_distance(Direction.Left.value[0], False) > 3:
+                        vel_msg.angular.z += math.radians(5)
+                    else:
+                        stapilization_needed = True
 
-            
+                # if stapilization_needed:
+                #     if self.detect_collision(Direction.Left) or self.detect_collision(Direction.Left) and self.detect_collision(Direction.Right):
+                #         vel_msg.angular.z += math.radians(
+                #             self.get_wall_angle(Direction.Left.value[0]))
+                #     else:
+                #         vel_msg.angular.z -= math.radians(
+                #             self.get_wall_angle(Direction.Right.value[0]))
 
+            else:
+                if self.detect_collision(Direction.ForwardLeft) or self.detect_collision(Direction.ForwardRight):
+                    if self.detect_collision(Direction.ForwardLeft):
+                        vel_msg.angular.z += math.radians(-10)
+                        print("turning right")
+                    elif self.detect_collision(Direction.ForwardRight):
+                        vel_msg.angular.z += math.radians(10)
+                        print("turning left")
+                    elif self.get_closeset(Direction.ForwardLeft) < self.get_closeset(Direction.ForwardRight):
+                        vel_msg.angular.z += math.radians(-10)
+                        print("turning right")
+                    elif self.get_closeset(Direction.ForwardLeft) > self.get_closeset(Direction.ForwardRight):
+                        vel_msg.angular.z += math.radians(10)
+                        print("turning left")
+                    else:
+                        vel_msg.angular.z += math.radians(-10)
+                        print("turning right")
+                else:
+                    vel_msg.angular.z += math.radians(-10)
+                    print("turning right")
 
-            self.twist_pub.publish(vel_msg)
             rate.sleep()
+            self.twist_pub.publish(vel_msg)
 
     def get_closeset(self, Direction):
         minrange = 999
@@ -184,4 +224,4 @@ class platypous_controller:
 
 if __name__ == '__main__':
     pc = platypous_controller()
-    pc.move()
+    pc.move(1)
