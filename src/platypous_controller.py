@@ -25,6 +25,12 @@ class Direction(Enum):
     NotSet = -1,
 
 
+class Turning(Enum):
+    Left = 0,
+    Right = 1,
+    NotSet = 2,
+
+
 class Orientation:
     def __init__(self, x, y, z):
         self.x = x
@@ -82,9 +88,11 @@ class platypous_controller:
 
     def move(self, speed_m_per_s):
         rate = rospy.Rate(100)
+        turning_dir = Turning.NotSet
         while not rospy.is_shutdown():
             vel_msg = Twist()
             if not self.detect_collision(Direction.Forward):
+                turning_dir = Turning.NotSet
                 vel_msg.linear.x += speed_m_per_s
 
                 if self.detect_collision(Direction.ForwardLeft):
@@ -110,34 +118,42 @@ class platypous_controller:
                     else:
                         stapilization_needed = True
 
-                # if stapilization_needed:
-                #     if self.detect_collision(Direction.Left) or self.detect_collision(Direction.Left) and self.detect_collision(Direction.Right):
-                #         vel_msg.angular.z += math.radians(
-                #             self.get_wall_angle(Direction.Left.value[0]))
-                #     else:
-                #         vel_msg.angular.z -= math.radians(
-                #             self.get_wall_angle(Direction.Right.value[0]))
-
-            else:
-                if self.detect_collision(Direction.ForwardLeft) or self.detect_collision(Direction.ForwardRight):
-                    if self.detect_collision(Direction.ForwardLeft):
-                        vel_msg.angular.z += math.radians(-10)
-                        print("turning right")
-                    elif self.detect_collision(Direction.ForwardRight):
-                        vel_msg.angular.z += math.radians(10)
-                        print("turning left")
-                    elif self.get_closeset(Direction.ForwardLeft) < self.get_closeset(Direction.ForwardRight):
-                        vel_msg.angular.z += math.radians(-10)
-                        print("turning right")
-                    elif self.get_closeset(Direction.ForwardLeft) > self.get_closeset(Direction.ForwardRight):
-                        vel_msg.angular.z += math.radians(10)
-                        print("turning left")
+                if stapilization_needed:
+                    if self.detect_collision(Direction.Left) or self.detect_collision(Direction.Left) and self.detect_collision(Direction.Right):
+                        turn = self.get_wall_angle(Direction.Right.value[0])
+                        if not math.isnan(turn):
+                            print(str(turn))
+                            vel_msg.angular.z -= math.radians(turn)
                     else:
-                        vel_msg.angular.z += math.radians(-10)
+                        turn = self.get_wall_angle(Direction.Left.value[0])
+                        if not math.isnan(turn):
+                            print(str(turn))
+                            vel_msg.angular.z += math.radians(turn)
+            else:
+                # turn = self.get_wall_angle(Direction.Forward.value[0])
+                # if not math.isnan(turn) and abs(turn) > 12:
+                #     print(str(turn))
+                #     vel_msg.angular.z -= math.radians(turn)
+                # elif self.detect_collision(Direction.ForwardRight):
+
+                if turning_dir == Turning.NotSet:
+                    if self.detect_collision(Direction.ForwardLeft) or self.detect_collision(Direction.ForwardRight):
+                        if self.get_closeset(Direction.ForwardLeft) < self.get_closeset(Direction.ForwardRight):
+                            turning_dir = Turning.Right
+                            print("turning right")
+                        elif self.get_closeset(Direction.ForwardLeft) > self.get_closeset(Direction.ForwardRight):
+                            turning_dir = Turning.Left
+                            print("turning left")
+                        else:
+                            turning_dir = Turning.Right
+                            print("turning right")
+                    else:
+                        turning_dir = Turning.Right
                         print("turning right")
+                elif turning_dir == Turning.Left:
+                    vel_msg.angular.z += math.radians(10)
                 else:
-                    vel_msg.angular.z += math.radians(-10)
-                    print("turning right")
+                    vel_msg.angular.z -= math.radians(10)
 
             rate.sleep()
             self.twist_pub.publish(vel_msg)
@@ -183,13 +199,6 @@ class platypous_controller:
     def get_current_orientation(self):
         orientation = self.wheelTwistOdometry_data.pose.pose.orientation
         return self.euler_from_quaternion(orientation.x, orientation.y, orientation.z, orientation.w)
-
-    def get_current_position(self):
-        position = self.wheelTwistOdometry_data.pose.pose.position
-        return Position(position.x, position.y, position.z)
-
-    def get_distance_between_positions(self, pos_base, pos_comp):
-        return math.sqrt(math.pow((pos_comp.x-pos_base.x), 2)+math.pow((pos_comp.y-pos_base.y), 2)+math.pow((pos_comp.z-pos_base.z), 2))
 
     def turn(self, angle):
         curr_angle = round(-self.get_current_orientation().z)
