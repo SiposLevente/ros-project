@@ -130,12 +130,6 @@ class platypous_controller:
                             print(str(turn))
                             vel_msg.angular.z += math.radians(turn)
             else:
-                # turn = self.get_wall_angle(Direction.Forward.value[0])
-                # if not math.isnan(turn) and abs(turn) > 12:
-                #     print(str(turn))
-                #     vel_msg.angular.z -= math.radians(turn)
-                # elif self.detect_collision(Direction.ForwardRight):
-
                 if turning_dir == Turning.NotSet:
                     if self.detect_collision(Direction.ForwardLeft) or self.detect_collision(Direction.ForwardRight):
                         if self.get_closeset(Direction.ForwardLeft) < self.get_closeset(Direction.ForwardRight):
