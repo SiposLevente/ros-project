@@ -37,14 +37,6 @@ class Orientation:
         self.y = y
         self.z = z
 
-
-class Position:
-    def __init__(self, x, y, z):
-        self.x = x
-        self.y = y
-        self.z = z
-
-
 class platypous_controller:
 
     def __init__(self):
@@ -170,60 +162,6 @@ class platypous_controller:
             if self.laserScan_data.ranges[Direction.value[0] - scan_range + i] <= distance_to_keep:
                 return True
         return False
-
-    def euler_from_quaternion(self, x, y, z, w):
-        t0 = +2.0 * (w * x + y * z)
-        t1 = +1.0 - 2.0 * (x * x + y * y)
-        roll_x = math.atan2(t0, t1)
-
-        t2 = +2.0 * (w * y - z * x)
-        t2 = +1.0 if t2 > +1.0 else t2
-        t2 = -1.0 if t2 < -1.0 else t2
-        pitch_y = math.asin(t2)
-
-        t3 = +2.0 * (w * z + x * y)
-        t4 = +1.0 - 2.0 * (y * y + z * z)
-        yaw_z = math.atan2(t3, t4)
-
-        orientation = Orientation(math.degrees(
-            roll_x), math.degrees(pitch_y), math.degrees(yaw_z))
-
-        return orientation
-
-    def get_current_orientation(self):
-        orientation = self.wheelTwistOdometry_data.pose.pose.orientation
-        return self.euler_from_quaternion(orientation.x, orientation.y, orientation.z, orientation.w)
-
-    def turn(self, angle):
-        curr_angle = round(-self.get_current_orientation().z)
-        goal_angle = self.add_to_angle(curr_angle, angle)
-        rate = rospy.Rate(100)
-        while not self.is_proximatly_equal(round(-self.get_current_orientation().z), goal_angle, 3) and not rospy.is_shutdown():
-            vel_msg = Twist()
-            if angle < 0:
-                vel_msg.angular.z = 1
-            else:
-                vel_msg.angular.z = -1
-
-            rate.sleep()
-            self.twist_pub.publish(vel_msg)
-
-            vel_msg.angular.z = 0
-            self.twist_pub.publish(vel_msg)
-
-    def add_to_angle(self, base_angle, increment):
-        base_angle += increment
-        if base_angle > 180:
-            base_angle = (-180 + base_angle)-180
-        if base_angle < -180:
-            base_angle = (base_angle)+180*2
-        return base_angle
-
-    def is_proximatly_equal(self, val_base, val_cmp, deviation):
-        if val_base >= val_cmp-deviation and val_base <= val_cmp+deviation:
-            return True
-        return False
-
 
 if __name__ == '__main__':
     pc = platypous_controller()

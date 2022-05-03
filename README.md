@@ -13,9 +13,6 @@ Indicates the direction the robot is turning.
 ### Orientation (Class):
 Used to store Euler rotations.
 
-### Position (Class):
-Used to store position in a 3D space.
-
 ### platypous_controller (Class):
 The main class for controlling the robot.
 
@@ -74,36 +71,3 @@ Parameters:
 - Direction: direction of the scan
 
 Returns true if there is a wall in the way of the scan.
-
-### euler_from_quaternion(x, y, z, w)
-Parameters:
-- x: The x parameter of the quaternion rotation
-- y: The y parameter of the quaternion rotation
-- z: The z parameter of the quaternion rotation
-- w: The w parameter of the quaternion rotation
-
-Returns the given rotation in Euler rotation.
-
-### get_current_orientation
-Returns the current orientation of the robot
-
-### turn(angle)
-Parameters:
-- angle: turn this much
-
-Turns the robot by the given angle
-
-### add_to_angle(base_angle, increment)
-Parameters:
-- base_angle: The base angle that will be modified
-- increment: The amount which the base angle will be modified
-
-Adds and returns the given angles, the angle is in the relative rotational format (-180..0..180)
-
-### is_proximatly_equal(val_base, val_cmp, deviation)
-Parameters:
-- val_base: The function will compare to this value
-- val_cmp: The comparison value
-- deviation: The deviation allowed between the 2 values
-
-Returns True if the 2 values only differ maximally by the given value.
