@@ -9,7 +9,8 @@ from enum import Enum
 
 scan_range = 35
 real_scan_range = scan_range*2
-distance_to_keep = 1.5
+distance_to_keep = 0.57
+max_distance = 1
 turn_angle = 10
 
 
@@ -98,14 +99,14 @@ class platypous_controller:
                 if self.get_distance(Direction.Right.value[0], False) < self.get_distance(Direction.Left.value[0], False):
                     if self.get_distance(Direction.Right.value[0], False) < distance_to_keep:
                         vel_msg.angular.z += math.radians(5)
-                    elif self.get_distance(Direction.Right.value[0], False) > 3:
+                    elif self.get_distance(Direction.Right.value[0], False) > max_distance:
                         vel_msg.angular.z += math.radians(-5)
                     else:
                         stapilization_needed = True
                 else:
                     if self.get_distance(Direction.Left.value[0], False) < distance_to_keep:
                         vel_msg.angular.z += math.radians(-5)
-                    elif self.get_distance(Direction.Left.value[0], False) > 3:
+                    elif self.get_distance(Direction.Left.value[0], False) > max_distance:
                         vel_msg.angular.z += math.radians(5)
                     else:
                         stapilization_needed = True
@@ -165,4 +166,4 @@ class platypous_controller:
 
 if __name__ == '__main__':
     pc = platypous_controller()
-    pc.move(1)
+    pc.move(0.5)
