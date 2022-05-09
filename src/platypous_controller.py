@@ -52,7 +52,7 @@ class platypous_controller:
     def listener(self):
         rospy.init_node('platypous_controller', anonymous=True)
         self.subscribe_odometry = rospy.Subscriber(
-            "/driver/wheel_odometry", Odometry, self.wheelTwistOdometry)
+            "/odometry/wheel", Odometry, self.wheelTwistOdometry)
         self.subscribe_laser = rospy.Subscriber(
             "/scan", LaserScan, self.laserScan)
 
